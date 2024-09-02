@@ -7,9 +7,11 @@ import (
 	"log/slog"
 )
 
-func RunWorker(name string, activity any, logger *slog.Logger) error {
-	logger.Info("Starting worker", slog.String("worker_name", name))
-	c, err := client.Dial(client.Options{})
+func RunActivityWorker(name string, activity any, logger *slog.Logger) error {
+	logger.Info("Starting activity worker", slog.String("worker_name", name))
+	c, err := client.Dial(client.Options{
+		Logger: logger,
+	})
 	if err != nil {
 		msg := "unable to create client"
 		logger.Error(msg, slog.String("worker_name", name), slog.Any("error", err))
@@ -17,7 +19,9 @@ func RunWorker(name string, activity any, logger *slog.Logger) error {
 	}
 	defer c.Close()
 
-	w := worker.New(c, name, worker.Options{})
+	w := worker.New(c, name, worker.Options{
+		Identity: fmt.Sprintf("%s-worker", name),
+	})
 	w.RegisterActivity(activity)
 
 	logger.Info("Running worker...", slog.String("worker_name", name))
@@ -27,6 +31,6 @@ func RunWorker(name string, activity any, logger *slog.Logger) error {
 		return fmt.Errorf("%s: %w", msg, err)
 	}
 
-	logger.Info("Worker has been stopped", slog.String("worker_name", name))
+	logger.Info("Activity worker has been stopped", slog.String("worker_name", name))
 	return nil
 }

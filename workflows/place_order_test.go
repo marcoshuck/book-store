@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/testsuite"
+	"log/slog"
 	"testing"
 )
 
@@ -29,7 +30,7 @@ func TestPlacerOrder(t *testing.T) {
 func (s *PlacerOrderTestSuite) SetupTest() {
 	s.env = s.NewTestWorkflowEnvironment()
 	s.orderCreator = orders.NewOrderCreator(nil)
-	s.paymentGateway = payments.NewPaymentGateway()
+	s.paymentGateway = payments.NewStripePaymentGateway(slog.Default())
 }
 
 func (s *PlacerOrderTestSuite) AfterTest(_, _ string) {
@@ -42,6 +43,7 @@ func (s *PlacerOrderTestSuite) TestCreateOrder_Fails() {
 		return errors.New("error")
 	})
 	s.env.ExecuteWorkflow(PlaceOrderWorkflow, &PlaceOrderRequest{
+		Email:     "todo@huck.com.ar",
 		PaymentID: "pi_3MrPBM2eZvKYlo2C1TEMacFD",
 		Order: &domain.Order{
 			CustomerID: uuid.New(),
@@ -75,7 +77,7 @@ func (s *PlacerOrderTestSuite) TestCreateOrder_Fails() {
 	s.Assert().Error(err)
 }
 
-func (s *PlacerOrderTestSuite) TestApplyPayment_Fails() {
+func (s *PlacerOrderTestSuite) TestCapturePayment_Fails() {
 	s.env.OnActivity(s.orderCreator.CreateOrder, mock.Anything, mock.Anything).Return(func(ctx context.Context, order *domain.Order) error {
 		s.Assert().NotNil(order)
 		return nil
@@ -85,6 +87,7 @@ func (s *PlacerOrderTestSuite) TestApplyPayment_Fails() {
 		return errors.New("failed to capture payment")
 	})
 	s.env.ExecuteWorkflow(PlaceOrderWorkflow, &PlaceOrderRequest{
+		Email:     "todo@huck.com.ar",
 		PaymentID: "pi_3MrPBM2eZvKYlo2C1TEMacFD",
 		Order: &domain.Order{
 			CustomerID: uuid.New(),
@@ -118,7 +121,7 @@ func (s *PlacerOrderTestSuite) TestApplyPayment_Fails() {
 	s.Assert().Error(err)
 }
 
-func (s *PlacerOrderTestSuite) TestCreateOrder_Succeeds() {
+func (s *PlacerOrderTestSuite) TestPlaceOrder_Succeeds() {
 	s.env.OnActivity(s.orderCreator.CreateOrder, mock.Anything, mock.Anything).Return(func(ctx context.Context, order *domain.Order) error {
 		s.Assert().NotNil(order)
 		return nil
@@ -128,6 +131,7 @@ func (s *PlacerOrderTestSuite) TestCreateOrder_Succeeds() {
 		return nil
 	})
 	s.env.ExecuteWorkflow(PlaceOrderWorkflow, &PlaceOrderRequest{
+		Email:     "todo@huck.com.ar",
 		PaymentID: "pi_3MrPBM2eZvKYlo2C1TEMacFD",
 		Order: &domain.Order{
 			CustomerID: uuid.New(),

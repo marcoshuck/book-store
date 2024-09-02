@@ -36,6 +36,14 @@ func RunOrderCreatorWorker() error {
 	if err != nil {
 		return err
 	}
+	err = db.Migrator().AutoMigrate(
+		&domain.Address{},
+		&domain.OrderItem{},
+		&domain.Order{},
+	)
+	if err != nil {
+		return err
+	}
 	svc := NewOrderCreator(db)
-	return workers.RunWorker("create-order", svc, logger)
+	return workers.RunActivityWorker("create-order", svc, logger)
 }
